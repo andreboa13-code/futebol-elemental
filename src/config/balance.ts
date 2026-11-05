@@ -10,6 +10,13 @@
  * Orientação: celular EM PÉ. O seu time ataca para CIMA.
  */
 
+/**
+ * VELOCIDADE GERAL DO JOGO
+ * Multiplica TODAS as velocidades (jogadores, chute, passe) de uma vez.
+ * 1 = original. 0.75 = 25% mais lento. Ajuste aqui se o jogo parecer rápido ou lento.
+ */
+export const GAME_SPEED = 0.75;
+
 export const FIELD = {
   /** Largura do campo (de uma lateral à outra). */
   width: 24,
@@ -27,25 +34,26 @@ export const BALL = {
   radius: 0.45,
   /**
    * Atrito: fração da velocidade que SOBRA após 1 segundo.
-   * 0.35 = a bola perde 65% da velocidade por segundo.
+   * 0.45 = a bola perde 55% da velocidade por segundo.
+   * (Um pouco menos de atrito que antes: com o jogo mais lento, a bola ainda precisa chegar longe.)
    */
-  frictionPerSecond: 0.35,
+  frictionPerSecond: 0.45,
   /** Quanto da velocidade sobra ao bater numa parede (0 a 1). */
   wallBounce: 0.75,
   /** Abaixo desta velocidade a bola é considerada parada. */
-  stopSpeed: 0.05,
+  stopSpeed: 0.05 * GAME_SPEED,
 } as const;
 
 export const PLAYER = {
   radius: 0.8,
   /** Velocidade máxima correndo (metros por segundo). */
-  maxSpeed: 9,
+  maxSpeed: 9 * GAME_SPEED,
   /** Velocidade com a bola nos pés (um pouco mais lento, para dar chance à defesa). */
-  dribbleSpeed: 7.5,
+  dribbleSpeed: 7.5 * GAME_SPEED,
   /** Distância extra, além dos raios, em que o jogador "gruda" na bola. */
   pickupRange: 0.25,
   /** Bola mais rápida que isso passa direto (não dá para dominar um chute forte). */
-  maxPickupBallSpeed: 16,
+  maxPickupBallSpeed: 16 * GAME_SPEED,
   /** Rapidez para atingir a velocidade desejada (maior = mais "seco"). */
   accelHuman: 20,
   accelBot: 10,
@@ -53,7 +61,7 @@ export const PLAYER = {
 
 export const KICK = {
   /** Velocidade da bola no chute (metros por segundo). */
-  speed: 24,
+  speed: 24 * GAME_SPEED,
   /** Segundos depois de chutar em que o jogador não pode dominar a bola de novo. */
   recoverTime: 0.35,
 } as const;
@@ -95,7 +103,7 @@ export const AI = {
   /** Adversário mais perto que isso = bot sob pressão e tenta passar. */
   pressureDistance: 2.6,
   /** Velocidade do passe dos bots (precisa ser dominável). */
-  passSpeed: 15,
+  passSpeed: 15 * GAME_SPEED,
   /** Imprecisão do chute: fração da boca do gol em que o bot mira. */
   shotSpread: 0.75,
   /** Preferência dos bots do seu time em passar para você (em "metros de vantagem"). */
