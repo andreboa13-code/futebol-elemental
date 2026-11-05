@@ -8,8 +8,9 @@
  *  Time atacando (sem a bola): abre pelos lados e se oferece à frente da bola.
  *  Time defendendo: o mais perto da bola pressiona; os outros fecham o caminho do gol.
  *
- * Os bots do SEU time nunca pressionam: quem pressiona é você
- * (a troca automática sempre te dá o jogador mais perto da bola).
+ * Você controla sempre o mesmo jogador; seus 2 companheiros são bots.
+ * No seu time, se VOCÊ for o mais perto da bola, nenhum bot sai para pressionar
+ * (a pressão é sua); senão, o bot mais perto pressiona.
  */
 import { AI, FIELD, KICK } from '../config/balance';
 import { attackDirY, attackGoalY, clamp, dist, lerp, ownGoalY } from './geometry';
@@ -103,7 +104,9 @@ function withBall(s: GameState, i: number, d: BotDecision): void {
       if (q.team !== p.team) continue;
       const advance = (q.y - p.y) * attackDirY(p.team); // positivo = mais perto do gol
       const freedom = Math.min(nearestOpponentDistance(s, p.team, q.x, q.y), 6);
-      const score = advance * 0.5 + freedom;
+      // Bônus para passar para você: receber a bola é a parte divertida.
+      const humanBonus = j === s.controlled ? AI.passToHumanBonus : 0;
+      const score = advance * 0.5 + freedom + humanBonus;
       if (score > bestScore) {
         bestScore = score;
         bestJ = j;
@@ -160,8 +163,10 @@ export function think(s: GameState, i: number, d: BotDecision): void {
     }
   } else {
     // DEFESA ou bola solta.
-    const chaser = p.team === 'away' ? nearestToBall(s, 'away') : -1;
-    if (chaser === i) {
+    // O mais perto da bola de cada time pressiona. No seu time, se o mais perto for você,
+    // os bots mantêm posição.
+    const chaser = nearestToBall(s, p.team);
+    if (chaser === i && i !== s.controlled) {
       // Pressiona: corre para onde a bola vai estar em instantes.
       d.tx = ball.x + ball.vx * 0.2;
       d.ty = ball.y + ball.vy * 0.2;

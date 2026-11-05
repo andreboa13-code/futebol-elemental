@@ -54,7 +54,7 @@ export type GameState = {
   players: PlayerState[];
   /** Índice de quem está com a bola, ou -1 se ela está solta. */
   owner: number;
-  /** Índice do jogador do seu time que você controla agora. */
+  /** Índice do jogador que você controla (fixo durante a partida). Os outros são bots. */
   controlled: number;
   score: { home: number; away: number };
   phase: Phase;

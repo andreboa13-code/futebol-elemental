@@ -57,8 +57,6 @@ export function resetFormation(s: GameState): void {
   }
   resetBallToCenter(s.ball);
   s.owner = -1;
-  // Você começa controlando o atacante da esquerda, o mais perto da bola.
-  s.controlled = 1;
 }
 
 export function createMatch(): GameState {
@@ -70,6 +68,7 @@ export function createMatch(): GameState {
     ball: { x: 0, y: 0, vx: 0, vy: 0 },
     players,
     owner: -1,
+    // Você é o atacante da esquerda. Na escolha de personagem (M4) isso vira configurável.
     controlled: 1,
     score: { home: 0, away: 0 },
     phase: 'playing',

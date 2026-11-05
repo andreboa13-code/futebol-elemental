@@ -87,7 +87,7 @@ export const MATCH = {
 /** Comportamento dos bots (dificuldade). */
 export const AI = {
   /** Velocidade dos bots em relação à velocidade máxima (0 a 1). */
-  speedFactor: 0.85,
+  speedFactor: 0.88,
   /** Tempo de reação depois de dominar a bola antes de passar/chutar (s). */
   reactionTime: 0.25,
   /** Distância do gol a partir da qual o bot chuta. */
@@ -98,8 +98,8 @@ export const AI = {
   passSpeed: 15,
   /** Imprecisão do chute: fração da boca do gol em que o bot mira. */
   shotSpread: 0.75,
-  /** Diferença de distância (m) para trocar o jogador que você controla. */
-  switchHysteresis: 2,
+  /** Preferência dos bots do seu time em passar para você (em "metros de vantagem"). */
+  passToHumanBonus: 2,
 } as const;
 
 export const JOYSTICK = {

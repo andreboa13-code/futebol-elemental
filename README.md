@@ -24,7 +24,7 @@ Especificação do MVP: https://claude.ai/artifact/2vLA2ZbpWxfrYtD7hiswQp
 
 Um único controle: toque em qualquer lugar da tela e arraste para correr. Soltar o dedo chuta na direção em que o jogador está virado. Encostar em quem está com a bola rouba a bola. Você ataca para cima.
 
-Você sempre controla quem está com a bola ou, sem ela, o jogador do seu time mais perto dela (anel amarelo). Partida de 2 minutos: quem fizer 2 gols vence na hora; empate vai para 30 s de morte súbita.
+Você controla sempre o mesmo jogador (anel amarelo); seus dois companheiros são bots. Partida de 2 minutos: quem fizer 2 gols vence na hora; empate vai para 30 s de morte súbita.
 
 ## Onde ajustar a sensação do jogo
 

@@ -3,10 +3,9 @@
  * ----------------
  * Tudo o que acontece em um quadro, nesta ordem:
  *  1. Fases (pausa de gol, fim de jogo) e cronômetro
- *  2. Quem você controla (troca automática)
- *  3. Movimento de todos (você pelo joystick, o resto pelos bots)
- *  4. Chutes, roubadas, domínio e condução
- *  5. Bola solta, paredes e gols
+ *  2. Movimento de todos (você pelo joystick, o resto pelos bots)
+ *  3. Chutes, roubadas, domínio e condução
+ *  4. Bola solta, paredes e gols
  */
 import { AI, BALL, FIELD, KICK, MATCH, PLAYER, TACKLE } from '../config/balance';
 import { think, type BotDecision } from './ai';
@@ -57,23 +56,6 @@ function maxSpeedOf(s: GameState, i: number): number {
   if (p.team === 'away' || i !== s.controlled) v *= AI.speedFactor;
   if (p.stun > 0) v *= TACKLE.stunSpeedFactor;
   return v;
-}
-
-/** Troca automática: você controla quem está com a bola ou o mais perto dela. */
-function updateControlled(s: GameState): void {
-  'worklet';
-  if (s.owner >= 0 && s.players[s.owner].team === 'home') {
-    s.controlled = s.owner;
-    return;
-  }
-  const cur = s.players[s.controlled];
-  const curD = dist(cur.x, cur.y, s.ball.x, s.ball.y);
-  for (let j = 0; j < s.players.length; j++) {
-    const q = s.players[j];
-    if (q.team !== 'home' || j === s.controlled) continue;
-    // Histerese: só troca se o outro estiver claramente mais perto (evita "piscar").
-    if (dist(q.x, q.y, s.ball.x, s.ball.y) < curD - AI.switchHysteresis) s.controlled = j;
-  }
 }
 
 function tickTimers(p: PlayerState, dt: number): void {
@@ -181,7 +163,6 @@ export function stepMatch(s: GameState, input: InputState, dt: number): StepResu
     return s.phase === 'ended' && phaseBefore !== 'ended' ? 'ended' : 'none';
   }
 
-  updateControlled(s);
   const r = PLAYER.radius;
   // Um objeto por quadro para as decisões dos bots, reaproveitado entre os 5 bots.
   // (Criado aqui dentro de propósito: objetos de fora da worklet chegam como cópia somente leitura.)
