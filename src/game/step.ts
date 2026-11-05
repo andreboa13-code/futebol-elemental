@@ -219,8 +219,11 @@ export function stepMatch(s: GameState, input: InputState, dt: number): StepResu
           sprint = 1;
         }
       } else {
-        const refill = mag < STAMINA.stillInput ? STAMINA.refillStill : STAMINA.refillMoving;
-        s.stamina = Math.min(1, s.stamina + refill * dt);
+        // Só recupera o fôlego SEM a bola. Com a bola, corre mesmo cansado.
+        if (s.owner !== i) {
+          const refill = mag < STAMINA.stillInput ? STAMINA.refillStill : STAMINA.refillMoving;
+          s.stamina = Math.min(1, s.stamina + refill * dt);
+        }
       }
       steer(p, input.x * speed * sprint, input.y * speed * sprint, PLAYER.accelHuman, dt);
       if (mag > 0) {

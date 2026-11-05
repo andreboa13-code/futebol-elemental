@@ -148,6 +148,7 @@ export const SPRINT = {
 
 /**
  * STAMINA: o sprint gasta; ficar parado recarrega rápido, andar devagar recarrega pouco.
+ * Só recarrega SEM a bola: com a bola você corre mesmo cansado.
  * Sem stamina, você ainda corre na velocidade normal, só não acelera além dela.
  */
 export const STAMINA = {
