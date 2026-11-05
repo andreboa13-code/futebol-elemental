@@ -9,7 +9,7 @@
  * Gol de CIMA (y = 0) é onde o seu time marca. Gol de BAIXO é o seu.
  */
 import { BALL, FIELD } from '../config/balance';
-import type { BallState, StepEvent } from './types';
+import type { BallState, Team } from './types';
 
 /** Faixa horizontal (x) ocupada pela boca dos gols. */
 export function goalMouth(): { left: number; right: number } {
@@ -36,9 +36,9 @@ export function moveBall(ball: BallState, dt: number): void {
 
 /**
  * Trata paredes e gols. Chamada todo quadro, com a bola solta ou nos pés.
- * Devolve se houve gol.
+ * Devolve o time que marcou, ou null se não houve gol.
  */
-export function resolveBallBounds(ball: BallState): StepEvent {
+export function resolveBallBounds(ball: BallState): Team | null {
   'worklet';
   const r = BALL.radius;
   const { left, right } = goalMouth();
@@ -57,8 +57,8 @@ export function resolveBallBounds(ball: BallState): StepEvent {
 
   if (insideMouth) {
     // A bola inteira cruzou a linha → gol.
-    if (ball.y < -r) return { kind: 'goal', scoredBy: 'home' };
-    if (ball.y > FIELD.height + r) return { kind: 'goal', scoredBy: 'away' };
+    if (ball.y < -r) return 'home';
+    if (ball.y > FIELD.height + r) return 'away';
   } else {
     if (ball.y < r) {
       ball.y = r;
@@ -69,7 +69,7 @@ export function resolveBallBounds(ball: BallState): StepEvent {
     }
   }
 
-  return { kind: 'none' };
+  return null;
 }
 
 /** Coloca a bola parada no centro do campo. */

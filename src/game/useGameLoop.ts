@@ -3,42 +3,49 @@
  * ------------
  * Um único `useFrameCallback` roda a cada quadro na thread de UI.
  * O estado vive num SharedValue, que o Skia lê direto para desenhar.
- * O React só é avisado quando algo raro acontece (ex.: gol), via scheduleOnRN.
+ * O React só é avisado quando algo raro acontece (gol, segundo do relógio, fim),
+ * via scheduleOnRN, para o placar e as telas.
  */
 import { useCallback, useState } from 'react';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { FIELD, MAX_FRAME_DT } from '../config/balance';
-import { moveBall, resetBallToCenter, resolveBallBounds } from './physics';
-import { createPlayer, resetPlayer, stepPlayer } from './player';
-import type { GameState, InputState, Side } from './types';
+import { MATCH, MAX_FRAME_DT } from '../config/balance';
+import { createMatch, restartMatch } from './match';
+import { stepMatch } from './step';
+import type { GameState, HudState, InputState, Phase } from './types';
 
-function createInitialState(): GameState {
-  return {
-    ball: { x: FIELD.width / 2, y: FIELD.height / 2, vx: 0, vy: 0 },
-    player: createPlayer(),
-    score: { home: 0, away: 0 },
-  };
-}
+const INITIAL_HUD: HudState = {
+  home: 0,
+  away: 0,
+  seconds: MATCH.duration,
+  phase: 'playing',
+  suddenDeath: false,
+};
 
 export function useGameLoop() {
-  const state = useSharedValue<GameState>(createInitialState());
+  const state = useSharedValue<GameState>(createMatch());
   // Entrada do joystick: escrita pelo gesto, lida (e o chute "consumido") pelo loop.
   const input = useSharedValue<InputState>({ x: 0, y: 0, kickRequested: false });
+  // Pedido de nova partida, feito pelo botão da tela final.
+  const restartRequested = useSharedValue(false);
   // Interruptor do loop: se der erro, desligamos aqui sem derrubar o app.
   const running = useSharedValue(true);
 
-  // Placar espelhado no React apenas para exibir na tela (muda raramente).
-  const [score, setScore] = useState({ home: 0, away: 0 });
+  const [hud, setHud] = useState<HudState>(INITIAL_HUD);
   const [loopError, setLoopError] = useState<string | null>(null);
 
-  const onGoal = useCallback((side: Side, home: number, away: number) => {
-    setScore({ home, away });
-    if (__DEV__) console.log(`Gol (${side})! ${home} x ${away}`);
-  }, []);
-
+  const onHud = useCallback(
+    (home: number, away: number, seconds: number, phase: Phase, suddenDeath: boolean) => {
+      setHud({ home, away, seconds, phase, suddenDeath });
+    },
+    [],
+  );
   const onLoopError = useCallback((message: string) => setLoopError(message), []);
+
+  const restart = useCallback(() => {
+    restartRequested.value = true;
+  }, [restartRequested]);
 
   useFrameCallback((info) => {
     'worklet';
@@ -48,22 +55,24 @@ export function useGameLoop() {
       const rawDt = (info.timeSincePreviousFrame ?? 16) / 1000;
       const dt = Math.min(rawDt, MAX_FRAME_DT);
       const inp = input.value;
+      const wantsRestart = restartRequested.value;
 
       // modify() altera o objeto no lugar e notifica o Skia uma vez só.
       state.modify((s) => {
         'worklet';
-        stepPlayer(s.player, s.ball, inp, dt);
-        if (!s.player.hasBall) moveBall(s.ball, dt);
+        if (wantsRestart) restartMatch(s);
+        const result = stepMatch(s, inp, dt);
 
-        const event = resolveBallBounds(s.ball);
-        if (event.kind === 'goal') {
-          s.score[event.scoredBy] += 1;
-          resetBallToCenter(s.ball);
-          resetPlayer(s.player);
-          scheduleOnRN(onGoal, event.scoredBy, s.score.home, s.score.away);
+        // Avisa o React só quando o placar/fase muda ou o relógio vira um segundo.
+        const second = Math.ceil(s.timeLeft);
+        if (result !== 'none' || second !== s.hudSecond || wantsRestart) {
+          s.hudSecond = second;
+          scheduleOnRN(onHud, s.score.home, s.score.away, second, s.phase, s.suddenDeath);
         }
         return s;
       });
+
+      if (wantsRestart) restartRequested.value = false;
 
       // O pedido de chute vale por um quadro só.
       if (inp.kickRequested) {
@@ -80,5 +89,5 @@ export function useGameLoop() {
     }
   });
 
-  return { state, input, score, loopError };
+  return { state, input, hud, loopError, restart };
 }

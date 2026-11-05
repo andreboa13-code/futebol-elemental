@@ -7,63 +7,57 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { useGameLoop } from './game/useGameLoop';
+import type { Team } from './game/types';
 import { useJoystick } from './input/useJoystick';
 import { Ball } from './render/Ball';
-import { TEAM_COLORS } from './render/colors';
 import { Field } from './render/Field';
 import { Joystick } from './render/Joystick';
 import { computeLayout } from './render/layout';
 import { Player } from './render/Player';
 import { ErrorScreen } from './ui/ErrorBoundary';
+import { EndScreen, GoalBanner, Scoreboard } from './ui/Hud';
+
+/** Time de cada índice do estado: 0 a 2 = seu time, 3 a 5 = adversário. */
+const PLAYER_TEAMS: Team[] = ['home', 'home', 'home', 'away', 'away', 'away'];
 
 export function GameScreen() {
   const { width, height } = useWindowDimensions();
   const layout = useMemo(() => computeLayout(width, height), [width, height]);
-  const { state, input, score, loopError } = useGameLoop();
+  const { state, input, hud, loopError, restart } = useGameLoop();
   const { gesture, visual } = useJoystick(input);
 
   if (loopError) return <ErrorScreen message={`Erro no loop do jogo: ${loopError}`} />;
 
   return (
-    // A tela inteira é a área do joystick: toque em qualquer lugar.
-    <GestureDetector gesture={gesture}>
-      <View style={styles.container}>
-        <Canvas style={StyleSheet.absoluteFill}>
-          <Field layout={layout} />
-          <Player state={state} layout={layout} />
-          <Ball state={state} layout={layout} />
-          <Joystick visual={visual} />
-        </Canvas>
-
-        {/* Placar: React comum por cima do Canvas, atualizado só quando sai gol */}
-        <View style={styles.scoreboard} pointerEvents="none">
-          <Text style={[styles.score, { color: TEAM_COLORS.home }]}>{score.home}</Text>
-          <Text style={styles.separator}>×</Text>
-          <Text style={[styles.score, { color: TEAM_COLORS.away }]}>{score.away}</Text>
+    <View style={styles.container}>
+      {/* A área do jogo inteira é o joystick: toque em qualquer lugar. */}
+      <GestureDetector gesture={gesture}>
+        <View style={StyleSheet.absoluteFill}>
+          <Canvas style={StyleSheet.absoluteFill}>
+            <Field layout={layout} />
+            {PLAYER_TEAMS.map((team, i) => (
+              <Player key={i} state={state} layout={layout} index={i} team={team} />
+            ))}
+            <Ball state={state} layout={layout} />
+            <Joystick visual={visual} />
+          </Canvas>
         </View>
+      </GestureDetector>
 
+      <Scoreboard hud={hud} />
+      {hud.phase === 'goal' && <GoalBanner />}
+      {hud.phase === 'ended' && <EndScreen hud={hud} onRestart={restart} />}
+
+      {hud.phase === 'playing' && (
         <Text style={styles.hint} pointerEvents="none">
-          Arraste para correr · solte para chutar
+          Arraste para correr · solte para chutar · encoste para roubar
         </Text>
-      </View>
-    </GestureDetector>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0d3b1c' },
-  scoreboard: {
-    position: 'absolute',
-    top: 14,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingHorizontal: 14,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  score: { fontSize: 22, fontWeight: '800', minWidth: 24, textAlign: 'center' },
-  separator: { color: '#fff', fontSize: 18, marginHorizontal: 6 },
   hint: { position: 'absolute', bottom: 6, alignSelf: 'center', color: 'rgba(255,255,255,0.55)', fontSize: 11 },
 });

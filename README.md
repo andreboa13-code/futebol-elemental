@@ -22,7 +22,9 @@ Especificação do MVP: https://claude.ai/artifact/2vLA2ZbpWxfrYtD7hiswQp
 
 ## Como se joga
 
-Um único controle: toque em qualquer lugar da tela e arraste para correr. Soltar o dedo chuta na direção em que o jogador está virado. Você ataca para cima.
+Um único controle: toque em qualquer lugar da tela e arraste para correr. Soltar o dedo chuta na direção em que o jogador está virado. Encostar em quem está com a bola rouba a bola. Você ataca para cima.
+
+Você sempre controla quem está com a bola ou, sem ela, o jogador do seu time mais perto dela (anel amarelo). Partida de 2 minutos: quem fizer 2 gols vence na hora; empate vai para 30 s de morte súbita.
 
 ## Onde ajustar a sensação do jogo
 
@@ -43,7 +45,7 @@ Todos os números de equilíbrio (tamanho do campo, atrito da bola, força do ch
 
 - [x] **M0** Base do projeto: campo e loop a 60 fps com uma bola de demonstração
 - [x] **M1** Sensação da bola: joystick único (arrastar corre, soltar chuta), condução e gol
-- [ ] **M2** Partida 3v3 contra bots
+- [x] **M2** Partida 3v3 contra bots, cronômetro, roubada e tela de fim
 - [ ] **M3** Bola elemental e 3 personagens
 - [ ] **M4** Menus, escolha de personagem e sons
 - [ ] **M5** Arte e polimento

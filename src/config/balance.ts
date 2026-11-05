@@ -46,8 +46,9 @@ export const PLAYER = {
   pickupRange: 0.25,
   /** Bola mais rápida que isso passa direto (não dá para dominar um chute forte). */
   maxPickupBallSpeed: 16,
-  /** Posição inicial: centro, um pouco abaixo do meio (fração do comprimento). */
-  startYFraction: 0.62,
+  /** Rapidez para atingir a velocidade desejada (maior = mais "seco"). */
+  accelHuman: 20,
+  accelBot: 10,
 } as const;
 
 export const KICK = {
@@ -55,6 +56,50 @@ export const KICK = {
   speed: 24,
   /** Segundos depois de chutar em que o jogador não pode dominar a bola de novo. */
   recoverTime: 0.35,
+} as const;
+
+/** Roubada de bola: basta encostar no adversário que está com a bola. */
+export const TACKLE = {
+  /** Distância extra, além dos raios, para a roubada acontecer. */
+  reach: 0.15,
+  /** Segundos que quem perdeu a bola fica sem poder dominar de novo. */
+  stunTime: 0.7,
+  /** Velocidade (fração) de quem acabou de perder a bola. */
+  stunSpeedFactor: 0.5,
+  /** Segundos até o mesmo jogador poder roubar de novo (evita pingue-pongue). */
+  cooldown: 1.0,
+  /** Segundos de proteção logo após dominar a bola (dá tempo de reagir antes de perder). */
+  protectTime: 0.45,
+} as const;
+
+/** Regras da partida. */
+export const MATCH = {
+  /** Duração do tempo normal, em segundos. */
+  duration: 120,
+  /** Quem chegar a este número de gols vence na hora. */
+  goalsToWin: 2,
+  /** Morte súbita após empate no tempo normal (s). Gol nesse período vence. */
+  suddenDeath: 30,
+  /** Pausa para comemorar o gol antes de recomeçar (s). */
+  goalPause: 1.5,
+} as const;
+
+/** Comportamento dos bots (dificuldade). */
+export const AI = {
+  /** Velocidade dos bots em relação à velocidade máxima (0 a 1). */
+  speedFactor: 0.85,
+  /** Tempo de reação depois de dominar a bola antes de passar/chutar (s). */
+  reactionTime: 0.25,
+  /** Distância do gol a partir da qual o bot chuta. */
+  shootRange: 12,
+  /** Adversário mais perto que isso = bot sob pressão e tenta passar. */
+  pressureDistance: 2.6,
+  /** Velocidade do passe dos bots (precisa ser dominável). */
+  passSpeed: 15,
+  /** Imprecisão do chute: fração da boca do gol em que o bot mira. */
+  shotSpread: 0.75,
+  /** Diferença de distância (m) para trocar o jogador que você controla. */
+  switchHysteresis: 2,
 } as const;
 
 export const JOYSTICK = {
