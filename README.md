@@ -14,6 +14,11 @@ Especificação do MVP: https://claude.ai/artifact/2vLA2ZbpWxfrYtD7hiswQp
    ```
 3. Escaneie o QR code que aparece no terminal com o Expo Go (Android) ou com a câmera (iPhone).
    O celular e o computador precisam estar na mesma rede Wi-Fi.
+4. Se o celular não conseguir abrir (fica carregando ou dá erro de conexão), use o modo túnel,
+   que funciona mesmo em redes diferentes:
+   ```bash
+   npm run tunel
+   ```
 
 ## Como se joga
 
