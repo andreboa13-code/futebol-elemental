@@ -27,6 +27,7 @@ function kickBall(s: GameState, i: number, dx: number, dy: number, speed: number
   p.dirY = dy;
   p.recover = KICK.recoverTime;
   s.owner = -1;
+  s.kickGrace = KICK.graceTime;
   // Solta a bola um pouco à frente para não "grudar" de novo em ninguém colado.
   s.ball.x = p.x + dx * CARRY_DISTANCE;
   s.ball.y = p.y + dy * CARRY_DISTANCE;
@@ -53,7 +54,8 @@ function maxSpeedOf(s: GameState, i: number): number {
   'worklet';
   const p = s.players[i];
   let v = s.owner === i ? PLAYER.dribbleSpeed : PLAYER.maxSpeed;
-  if (p.team === 'away' || i !== s.controlled) v *= AI.speedFactor;
+  if (p.team === 'away') v *= AI.opponentSpeedFactor;
+  else if (i !== s.controlled) v *= AI.speedFactor;
   if (p.stun > 0) v *= TACKLE.stunSpeedFactor;
   return v;
 }
@@ -88,7 +90,10 @@ function separatePlayers(s: GameState): void {
   }
 }
 
-/** Roubada: um adversário encostou em quem está com a bola. */
+/**
+ * Roubada: um adversário encostou NA BOLA, chegando pela frente ou pelo lado
+ * de quem conduz. Por trás não vale (o corpo protege a bola).
+ */
 function checkTackle(s: GameState): void {
   'worklet';
   if (s.owner < 0) return;
@@ -97,20 +102,39 @@ function checkTackle(s: GameState): void {
   for (let j = 0; j < s.players.length; j++) {
     const q = s.players[j];
     if (q.team === o.team || q.tackleCooldown > 0 || q.stun > 0) continue;
-    if (dist(o.x, o.y, q.x, q.y) < PLAYER.radius * 2 + TACKLE.reach) {
-      o.stun = TACKLE.stunTime;
-      o.recover = TACKLE.stunTime;
-      q.tackleCooldown = TACKLE.cooldown;
-      giveBall(s, j);
-      return;
+
+    // 1) Precisa tocar a bola, não o corpo.
+    if (dist(q.x, q.y, s.ball.x, s.ball.y) > PLAYER.radius + BALL.radius + TACKLE.reach) continue;
+
+    // 2) Precisa estar à frente/ao lado de quem conduz (não pelas costas).
+    const rx = q.x - o.x;
+    const ry = q.y - o.y;
+    const rl = Math.hypot(rx, ry);
+    if (rl > 0 && (rx * o.dirX + ry * o.dirY) / rl < TACKLE.minFrontDot) continue;
+
+    // Rouba: quem perdeu fica tonto e é empurrado para trás; quem roubou fica protegido.
+    o.stun = TACKLE.stunTime;
+    o.recover = TACKLE.stunTime;
+    o.tackleCooldown = TACKLE.stunTime;
+    if (rl > 0) {
+      o.vx = -(rx / rl) * TACKLE.knockback;
+      o.vy = -(ry / rl) * TACKLE.knockback;
     }
+    q.tackleCooldown = TACKLE.cooldown;
+    giveBall(s, j);
+    // A bola passa a sair na direção de quem roubou (de frente para a jogada).
+    if (rl > 0) {
+      q.dirX = -rx / rl;
+      q.dirY = -ry / rl;
+    }
+    return;
   }
 }
 
 /** Domínio: o primeiro que encostar numa bola solta (e não muito rápida) fica com ela. */
 function checkPickup(s: GameState): void {
   'worklet';
-  if (s.owner >= 0) return;
+  if (s.owner >= 0 || s.kickGrace > 0) return;
   const ballSpeed = Math.hypot(s.ball.vx, s.ball.vy);
   if (ballSpeed >= PLAYER.maxPickupBallSpeed) return;
   let best = -1;
@@ -168,7 +192,12 @@ export function stepMatch(s: GameState, input: InputState, dt: number): StepResu
   // (Criado aqui dentro de propósito: objetos de fora da worklet chegam como cópia somente leitura.)
   const decision: BotDecision = { tx: 0, ty: 0, kick: false, kx: 0, ky: 0, kickSpeed: 0 };
 
-  for (let i = 0; i < s.players.length; i++) {
+  // Alterna a ordem de atualização a cada quadro. Sem isso, o time atualizado por
+  // último sempre reage com informação mais nova e leva vantagem (comprovado em simulação).
+  s.tick += 1;
+  const n = s.players.length;
+  for (let k = 0; k < n; k++) {
+    const i = s.tick % 2 === 0 ? k : n - 1 - k;
     const p = s.players[i];
     tickTimers(p, dt);
     const speed = maxSpeedOf(s, i);
@@ -206,6 +235,7 @@ export function stepMatch(s: GameState, input: InputState, dt: number): StepResu
     p.y = clamp(p.y + p.vy * dt, r, FIELD.height - r);
   }
 
+  if (s.kickGrace > 0) s.kickGrace -= dt;
   separatePlayers(s);
   checkTackle(s);
   checkPickup(s);

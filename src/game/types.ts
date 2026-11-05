@@ -54,6 +54,8 @@ export type GameState = {
   players: PlayerState[];
   /** Índice de quem está com a bola, ou -1 se ela está solta. */
   owner: number;
+  /** Tempo (s) depois de um chute/passe em que ninguém pode dominar a bola (evita "grudar" no pé de quem está colado). */
+  kickGrace: number;
   /** Índice do jogador que você controla (fixo durante a partida). Os outros são bots. */
   controlled: number;
   score: { home: number; away: number };
@@ -63,6 +65,8 @@ export type GameState = {
   suddenDeath: boolean;
   /** Tempo restante da pausa de gol (s). */
   phaseTimer: number;
+  /** Contador de quadros. Usado para alternar a ordem de atualização dos jogadores. */
+  tick: number;
   /** Último segundo enviado ao React (para atualizar o cronômetro só 1x por segundo). */
   hudSecond: number;
 };

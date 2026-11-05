@@ -64,20 +64,32 @@ export const KICK = {
   speed: 24 * GAME_SPEED,
   /** Segundos depois de chutar em que o jogador não pode dominar a bola de novo. */
   recoverTime: 0.35,
+  /** Segundos após o chute em que NINGUÉM domina a bola (ela precisa sair do pé primeiro). */
+  graceTime: 0.12,
 } as const;
 
-/** Roubada de bola: basta encostar no adversário que está com a bola. */
+/**
+ * Roubada de bola: encoste NA BOLA, pela frente de quem conduz.
+ * Chegar por trás (no corpo do jogador) não rouba.
+ */
 export const TACKLE = {
-  /** Distância extra, além dos raios, para a roubada acontecer. */
+  /** Distância extra, além dos raios, entre quem rouba e a bola. */
   reach: 0.15,
-  /** Segundos que quem perdeu a bola fica sem poder dominar de novo. */
-  stunTime: 0.7,
-  /** Velocidade (fração) de quem acabou de perder a bola. */
-  stunSpeedFactor: 0.5,
-  /** Segundos até o mesmo jogador poder roubar de novo (evita pingue-pongue). */
+  /**
+   * Ângulo mínimo para roubar, como produto escalar com a direção de quem conduz.
+   * 0 = só pela frente ou pelos lados (90°). Negativo libera um pouco por trás.
+   */
+  minFrontDot: 0,
+  /** Segundos que quem perdeu a bola fica tonto: mais lento, sem dominar e sem roubar. */
+  stunTime: 1.1,
+  /** Velocidade (fração) de quem está tonto. */
+  stunSpeedFactor: 0.45,
+  /** Empurrão em quem perdeu a bola (m/s), para separar os dois jogadores. */
+  knockback: 5,
+  /** Segundos até quem roubou poder roubar de novo. */
   cooldown: 1.0,
-  /** Segundos de proteção logo após dominar a bola (dá tempo de reagir antes de perder). */
-  protectTime: 0.45,
+  /** Segundos de proteção logo após dominar a bola: ninguém pode roubar nesse tempo. */
+  protectTime: 0.9,
 } as const;
 
 /** Regras da partida. */
@@ -94,14 +106,23 @@ export const MATCH = {
 
 /** Comportamento dos bots (dificuldade). */
 export const AI = {
-  /** Velocidade dos bots em relação à velocidade máxima (0 a 1). */
+  /** Velocidade dos seus companheiros (bots) em relação à velocidade máxima (0 a 1). */
   speedFactor: 0.88,
+  /**
+   * Velocidade dos ADVERSÁRIOS em relação à velocidade máxima (0 a 1).
+   * É o principal botão de DIFICULDADE: menor = mais fácil.
+   */
+  opponentSpeedFactor: 0.7,
   /** Tempo de reação depois de dominar a bola antes de passar/chutar (s). */
   reactionTime: 0.25,
   /** Distância do gol a partir da qual o bot chuta. */
   shootRange: 12,
   /** Adversário mais perto que isso = bot sob pressão e tenta passar. */
   pressureDistance: 2.6,
+  /** Distância (m) em que o zagueiro deixa a posição para dar o bote em quem conduz. */
+  backEngageRange: 7,
+  /** Distância mínima (m) de um adversário à linha do passe para o bot arriscar passar. */
+  laneMargin: 1.4,
   /** Velocidade do passe dos bots (precisa ser dominável). */
   passSpeed: 15 * GAME_SPEED,
   /** Imprecisão do chute: fração da boca do gol em que o bot mira. */

@@ -12,7 +12,7 @@
  * No seu time, se VOCÊ for o mais perto da bola, nenhum bot sai para pressionar
  * (a pressão é sua); senão, o bot mais perto pressiona.
  */
-import { AI, FIELD, KICK } from '../config/balance';
+import { AI, FIELD, KICK, TACKLE } from '../config/balance';
 import { attackDirY, attackGoalY, clamp, dist, lerp, ownGoalY } from './geometry';
 import type { GameState, PlayerState } from './types';
 
@@ -44,6 +44,42 @@ function nearestOpponentDistance(s: GameState, team: string, x: number, y: numbe
     if (d < best) best = d;
   }
   return best;
+}
+
+/**
+ * Distância do adversário mais perto que esteja À FRENTE ou ao lado de `p`.
+ * Quem está nas costas não ameaça (não pode roubar por trás).
+ */
+function frontPressure(s: GameState, p: PlayerState): number {
+  'worklet';
+  let best = 1e9;
+  for (let j = 0; j < s.players.length; j++) {
+    const q = s.players[j];
+    if (q.team === p.team || q.stun > 0) continue;
+    const rx = q.x - p.x;
+    const ry = q.y - p.y;
+    const d = Math.hypot(rx, ry);
+    if (d > 0 && (rx * p.dirX + ry * p.dirY) / d < TACKLE.minFrontDot) continue;
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+/** true se algum adversário está a menos de `margin` metros da linha do passe. */
+function laneBlocked(s: GameState, team: string, ax: number, ay: number, bx: number, by: number): boolean {
+  'worklet';
+  const lx = bx - ax;
+  const ly = by - ay;
+  const len2 = lx * lx + ly * ly;
+  if (len2 === 0) return false;
+  for (let j = 0; j < s.players.length; j++) {
+    const q = s.players[j];
+    if (q.team === team) continue;
+    // Projeção do adversário no segmento do passe.
+    const t = clamp(((q.x - ax) * lx + (q.y - ay) * ly) / len2, 0, 1);
+    if (dist(q.x, q.y, ax + lx * t, ay + ly * t) < AI.laneMargin) return true;
+  }
+  return false;
 }
 
 /** Índice do jogador do time `team` mais perto da bola. */
@@ -84,7 +120,7 @@ function withBall(s: GameState, i: number, d: BotDecision): void {
   const goalY = attackGoalY(p.team);
   const goalX = FIELD.width / 2;
   const toGoal = dist(p.x, p.y, goalX, goalY);
-  const pressure = nearestOpponentDistance(s, p.team, p.x, p.y);
+  const pressure = frontPressure(s, p);
   const canAct = p.decisionDelay <= 0;
 
   // 1) Perto do gol: chuta mirando um ponto aleatório dentro da boca.
@@ -94,7 +130,8 @@ function withBall(s: GameState, i: number, d: BotDecision): void {
     return;
   }
 
-  // 2) Pressionado: passa para o companheiro mais livre e mais adiantado.
+  // 2) Pressionado pela frente: passa para o companheiro mais livre e adiantado,
+  //    desde que a linha do passe não esteja fechada por um adversário.
   if (canAct && pressure < AI.pressureDistance) {
     let bestJ = -1;
     let bestScore = -1e9;
@@ -102,6 +139,7 @@ function withBall(s: GameState, i: number, d: BotDecision): void {
       if (j === i) continue;
       const q = s.players[j];
       if (q.team !== p.team) continue;
+      if (laneBlocked(s, p.team, p.x, p.y, q.x, q.y)) continue;
       const advance = (q.y - p.y) * attackDirY(p.team); // positivo = mais perto do gol
       const freedom = Math.min(nearestOpponentDistance(s, p.team, q.x, q.y), 6);
       // Bônus para passar para você: receber a bola é a parte divertida.
@@ -118,6 +156,11 @@ function withBall(s: GameState, i: number, d: BotDecision): void {
       aim(d, p.x, p.y, q.x + q.vx * 0.3, q.y + q.vy * 0.3, AI.passSpeed);
       return;
     }
+    // Sem linha de passe: chutão para frente, pelo lado oposto a quem pressiona
+    // (melhor que perder a bola na frente do próprio gol).
+    const side = p.x < FIELD.width / 2 ? 1 : -1;
+    aim(d, p.x, p.y, p.x + side * 6, p.y + attackDirY(p.team) * 10, KICK.speed);
+    return;
   }
 
   // 3) Conduz em direção ao gol, desviando de quem estiver na frente.
@@ -166,10 +209,21 @@ export function think(s: GameState, i: number, d: BotDecision): void {
     // O mais perto da bola de cada time pressiona. No seu time, se o mais perto for você,
     // os bots mantêm posição.
     const chaser = nearestToBall(s, p.team);
-    if (chaser === i && i !== s.controlled) {
-      // Pressiona: corre para onde a bola vai estar em instantes.
-      d.tx = ball.x + ball.vx * 0.2;
-      d.ty = ball.y + ball.vy * 0.2;
+    // O zagueiro também sai para o bote quando o atacante chega perto da área dele.
+    const backEngages =
+      p.role === 'back' && s.owner >= 0 && dist(p.x, p.y, ball.x, ball.y) < AI.backEngageRange;
+    if ((chaser === i || backEngages) && i !== s.controlled) {
+      if (s.owner >= 0) {
+        // Marca PELA FRENTE: corre para um ponto à frente da bola de quem conduz,
+        // porque por trás não dá para roubar.
+        const o = s.players[s.owner];
+        d.tx = ball.x + o.dirX * 1.2 + ball.vx * 0.15;
+        d.ty = ball.y + o.dirY * 1.2 + ball.vy * 0.15;
+      } else {
+        // Bola solta: corre para onde ela vai estar em instantes.
+        d.tx = ball.x + ball.vx * 0.2;
+        d.ty = ball.y + ball.vy * 0.2;
+      }
       return;
     }
     // Fecha o caminho entre a bola e o próprio gol.
