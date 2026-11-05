@@ -58,6 +58,7 @@ export function resetFormation(s: GameState): void {
   resetBallToCenter(s.ball);
   s.owner = -1;
   s.kickGrace = 0;
+  s.sprintTime = 0;
 }
 
 export function createMatch(): GameState {
@@ -79,6 +80,8 @@ export function createMatch(): GameState {
     phaseTimer: 0,
     hudSecond: -1,
     tick: 0,
+    sprintTime: 0,
+    stamina: 1,
   };
   resetFormation(s);
   return s;

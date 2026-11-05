@@ -7,7 +7,7 @@
  *  3. Chutes, roubadas, domínio e condução
  *  4. Bola solta, paredes e gols
  */
-import { AI, BALL, FIELD, KICK, MATCH, PLAYER, TACKLE } from '../config/balance';
+import { AI, BALL, FIELD, KICK, MATCH, PLAYER, SPRINT, STAMINA, TACKLE } from '../config/balance';
 import { think, type BotDecision } from './ai';
 import { clamp, dist } from './geometry';
 import { resetFormation } from './match';
@@ -204,8 +204,25 @@ export function stepMatch(s: GameState, input: InputState, dt: number): StepResu
 
     if (i === s.controlled) {
       // VOCÊ: joystick define a velocidade; soltar o dedo chuta.
-      steer(p, input.x * speed, input.y * speed, PLAYER.accelHuman, dt);
       const mag = Math.hypot(input.x, input.y);
+      // Sprint: segurar na mesma direção acelera; soltar ou virar mais de 90° zera.
+      const sameDirection = mag > 0 && (input.x * p.dirX + input.y * p.dirY) / mag > 0;
+      s.sprintTime = mag >= SPRINT.minInput && sameDirection ? s.sprintTime + dt : 0;
+      const ramp = Math.min(s.sprintTime / SPRINT.rampTime, 1);
+      let sprint = SPRINT.startFactor + (SPRINT.maxFactor - SPRINT.startFactor) * ramp;
+
+      // Stamina: só dá para passar da velocidade normal (1) se ainda houver stamina.
+      if (sprint > 1) {
+        if (s.stamina > 0) {
+          s.stamina = Math.max(0, s.stamina - STAMINA.drainPerSecond * dt);
+        } else {
+          sprint = 1;
+        }
+      } else {
+        const refill = mag < STAMINA.stillInput ? STAMINA.refillStill : STAMINA.refillMoving;
+        s.stamina = Math.min(1, s.stamina + refill * dt);
+      }
+      steer(p, input.x * speed * sprint, input.y * speed * sprint, PLAYER.accelHuman, dt);
       if (mag > 0) {
         p.dirX = input.x / mag;
         p.dirY = input.y / mag;

@@ -65,6 +65,10 @@ export type GameState = {
   suddenDeath: boolean;
   /** Tempo restante da pausa de gol (s). */
   phaseTimer: number;
+  /** Segundos que você está correndo na mesma direção (alimenta o sprint). */
+  sprintTime: number;
+  /** Sua stamina, de 0 (vazia) a 1 (cheia). */
+  stamina: number;
   /** Contador de quadros. Usado para alternar a ordem de atualização dos jogadores. */
   tick: number;
   /** Último segundo enviado ao React (para atualizar o cronômetro só 1x por segundo). */

@@ -1,34 +1,32 @@
 /**
- * Converte "metros do jogo" em pixels da tela.
- * O campo (com as redes em cima e embaixo) é encaixado na tela, em pé, mantendo a proporção.
+ * Converte "metros do jogo" em pixels.
+ * O mundo é desenhado com origem (0,0) no canto do campo; a câmera (useCamera)
+ * desloca esse desenho para manter o seu jogador no centro da tela.
  */
-import { FIELD } from '../config/balance';
+import { CAMERA, FIELD } from '../config/balance';
 
 export type Layout = {
-  /** Pixels por metro do jogo. */
+  /** Pixels por metro do jogo (já com o zoom aplicado). */
   scale: number;
-  /** Posição em pixels do canto superior esquerdo do campo. */
+  /** Posição em pixels do canto do campo dentro do mundo desenhado (0 com câmera). */
   originX: number;
   originY: number;
+  /** Tamanho da tela em pixels. */
+  screenWidth: number;
+  screenHeight: number;
 };
 
-/** Margem lateral em pixels. */
+/** Margem lateral em pixels quando o zoom é 1. */
 const SIDE_MARGIN = 12;
-/** Espaço reservado em cima para o placar. */
-const TOP_RESERVED = 56;
 
 export function computeLayout(screenWidth: number, screenHeight: number): Layout {
-  // Comprimento total desenhado inclui a profundidade das duas redes.
-  const worldW = FIELD.width;
-  const worldH = FIELD.height + FIELD.goalDepth * 2;
-
-  const availW = Math.max(1, screenWidth - SIDE_MARGIN * 2);
-  const availH = Math.max(1, screenHeight - TOP_RESERVED - SIDE_MARGIN);
-  const scale = Math.min(availW / worldW, availH / worldH);
-
+  // Com zoom 1, a largura do campo ocupa a largura da tela. O zoom multiplica a partir daí.
+  const fitScale = Math.max(1, screenWidth - SIDE_MARGIN * 2) / FIELD.width;
   return {
-    scale,
-    originX: (screenWidth - FIELD.width * scale) / 2,
-    originY: TOP_RESERVED + (availH - FIELD.height * scale) / 2,
+    scale: fitScale * CAMERA.zoom,
+    originX: 0,
+    originY: 0,
+    screenWidth,
+    screenHeight,
   };
 }

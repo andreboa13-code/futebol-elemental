@@ -131,6 +131,47 @@ export const AI = {
   passToHumanBonus: 2,
 } as const;
 
+/**
+ * SPRINT: quanto mais tempo você segura o joystick numa direção, mais rápido corre.
+ * Soltar o dedo (ou virar mais de 90°) zera a aceleração.
+ */
+export const SPRINT = {
+  /** Velocidade no começo da corrida (fração da velocidade normal). */
+  startFactor: 0.75,
+  /** Velocidade máxima depois de correr um tempo (fração da velocidade normal). */
+  maxFactor: 1.3,
+  /** Segundos segurando até chegar na velocidade máxima. */
+  rampTime: 1.5,
+  /** Força mínima no joystick (0 a 1) para contar como "correndo". */
+  minInput: 0.5,
+} as const;
+
+/**
+ * STAMINA: o sprint gasta; ficar parado recarrega rápido, andar devagar recarrega pouco.
+ * Sem stamina, você ainda corre na velocidade normal, só não acelera além dela.
+ */
+export const STAMINA = {
+  /** Quanto gasta por segundo correndo acima da velocidade normal (1 = barra cheia). */
+  drainPerSecond: 0.3,
+  /** Quanto recarrega por segundo parado. */
+  refillStill: 0.45,
+  /** Quanto recarrega por segundo andando sem sprint. */
+  refillMoving: 0.1,
+  /** Abaixo desta força no joystick (0 a 1) você conta como parado. */
+  stillInput: 0.15,
+} as const;
+
+/** Câmera que segue o seu jogador. */
+export const CAMERA = {
+  /**
+   * Zoom em relação ao campo inteiro caber na largura da tela.
+   * 1 = campo inteiro na tela. 2 = tudo com o dobro do tamanho (mostra metade da largura).
+   */
+  zoom: 2,
+  /** Quanto além das redes a câmera pode mostrar (m). */
+  edgeMargin: 1,
+} as const;
+
 export const JOYSTICK = {
   /** Raio, em pixels, até onde o polegar precisa ir para correr na velocidade máxima. */
   radiusPx: 60,
