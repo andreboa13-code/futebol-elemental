@@ -1,0 +1,40 @@
+# Futebol Elemental
+
+Futebol arcade 3v3 para celular, visto de cima, em que cada personagem carrega a bola com o seu elemento (fogo, gelo, raio).
+
+Especificação do MVP: https://claude.ai/artifact/2vLA2ZbpWxfrYtD7hiswQp
+
+## Como testar no celular
+
+1. Instale o app **Expo Go** no celular (Play Store ou App Store).
+2. No computador, com o Node.js instalado, rode na pasta do projeto:
+   ```bash
+   npm install
+   npx expo start
+   ```
+3. Escaneie o QR code que aparece no terminal com o Expo Go (Android) ou com a câmera (iPhone).
+   O celular e o computador precisam estar na mesma rede Wi-Fi.
+
+## Onde ajustar a sensação do jogo
+
+Todos os números de equilíbrio (tamanho do campo, atrito da bola, força do chute) ficam em
+[`src/config/balance.ts`](src/config/balance.ts), com comentários explicando cada um.
+
+## Estrutura
+
+| Pasta | O que tem |
+| --- | --- |
+| `src/config` | Valores de equilíbrio do jogo |
+| `src/game` | Regras, física e o loop a 60 fps (roda na thread de UI) |
+| `src/render` | Desenho com Skia: campo, bola, jogadores |
+| `src/ui` | Telas e componentes React (placar, erros, menus) |
+
+## Roadmap
+
+- [x] **M0** Base do projeto: campo e loop a 60 fps com uma bola de demonstração
+- [ ] **M1** Sensação da bola: joystick, passe, chute carregado e gol
+- [ ] **M2** Partida 3v3 contra bots
+- [ ] **M3** Bola elemental e 3 personagens
+- [ ] **M4** Menus, escolha de personagem e sons
+- [ ] **M5** Arte e polimento
+- [ ] **M6** Teste com pessoas reais

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "futebol-elemental",
+    "name": "Futebol Elemental",
     "slug": "futebol-elemental",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "landscape",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },

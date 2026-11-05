@@ -1,20 +1,18 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import { GameScreen } from './src/GameScreen';
+import { ErrorBoundary } from './src/ui/ErrorBoundary';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    // GestureHandlerRootView: necessário para os controles de toque (M1 em diante).
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <GameScreen />
+      </ErrorBoundary>
+      <StatusBar hidden />
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
