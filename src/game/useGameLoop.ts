@@ -9,41 +9,33 @@ import { useCallback, useState } from 'react';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { DEMO, FIELD, MAX_FRAME_DT } from '../config/balance';
-import { resetBallToCenter, stepBall } from './physics';
-import type { GameState, Side } from './types';
+import { FIELD, MAX_FRAME_DT } from '../config/balance';
+import { moveBall, resetBallToCenter, resolveBallBounds } from './physics';
+import { createPlayer, resetPlayer, stepPlayer } from './player';
+import type { GameState, InputState, Side } from './types';
 
 function createInitialState(): GameState {
   return {
     ball: { x: FIELD.width / 2, y: FIELD.height / 2, vx: 0, vy: 0 },
-    score: { left: 0, right: 0 },
-    idleTime: 0,
-    kickSeed: 1,
+    player: createPlayer(),
+    score: { home: 0, away: 0 },
   };
-}
-
-/**
- * Gera um número entre 0 e 1 a partir de uma semente (pseudoaleatório determinístico).
- * Determinístico = mesma semente, mesmo resultado; útil para reproduzir bugs.
- */
-function seededRandom(seed: number): number {
-  'worklet';
-  const x = Math.sin(seed * 12.9898) * 43758.5453;
-  return x - Math.floor(x);
 }
 
 export function useGameLoop() {
   const state = useSharedValue<GameState>(createInitialState());
+  // Entrada do joystick: escrita pelo gesto, lida (e o chute "consumido") pelo loop.
+  const input = useSharedValue<InputState>({ x: 0, y: 0, kickRequested: false });
   // Interruptor do loop: se der erro, desligamos aqui sem derrubar o app.
   const running = useSharedValue(true);
 
   // Placar espelhado no React apenas para exibir na tela (muda raramente).
-  const [score, setScore] = useState({ left: 0, right: 0 });
+  const [score, setScore] = useState({ home: 0, away: 0 });
   const [loopError, setLoopError] = useState<string | null>(null);
 
-  const onGoal = useCallback((side: Side, left: number, right: number) => {
-    setScore({ left, right });
-    if (__DEV__) console.log(`Gol do lado ${side}! ${left} x ${right}`);
+  const onGoal = useCallback((side: Side, home: number, away: number) => {
+    setScore({ home, away });
+    if (__DEV__) console.log(`Gol (${side})! ${home} x ${away}`);
   }, []);
 
   const onLoopError = useCallback((message: string) => setLoopError(message), []);
@@ -55,35 +47,32 @@ export function useGameLoop() {
       // Primeiro quadro não tem intervalo; depois limitamos o dt para evitar saltos.
       const rawDt = (info.timeSincePreviousFrame ?? 16) / 1000;
       const dt = Math.min(rawDt, MAX_FRAME_DT);
+      const inp = input.value;
 
       // modify() altera o objeto no lugar e notifica o Skia uma vez só.
       state.modify((s) => {
         'worklet';
-        const event = stepBall(s.ball, dt);
+        stepPlayer(s.player, s.ball, inp, dt);
+        if (!s.player.hasBall) moveBall(s.ball, dt);
 
+        const event = resolveBallBounds(s.ball);
         if (event.kind === 'goal') {
           s.score[event.scoredBy] += 1;
           resetBallToCenter(s.ball);
-          s.idleTime = 0;
-          scheduleOnRN(onGoal, event.scoredBy, s.score.left, s.score.right);
-          return s;
-        }
-
-        // Demonstração do M0: bola parada por um tempo leva um chute automático.
-        const stopped = s.ball.vx === 0 && s.ball.vy === 0;
-        s.idleTime = stopped ? s.idleTime + dt : 0;
-        if (s.idleTime > DEMO.idleBeforeKick) {
-          s.kickSeed += 1;
-          const angle = seededRandom(s.kickSeed) * Math.PI * 2;
-          const speed =
-            DEMO.minKickSpeed +
-            seededRandom(s.kickSeed + 0.5) * (DEMO.maxKickSpeed - DEMO.minKickSpeed);
-          s.ball.vx = Math.cos(angle) * speed;
-          s.ball.vy = Math.sin(angle) * speed;
-          s.idleTime = 0;
+          resetPlayer(s.player);
+          scheduleOnRN(onGoal, event.scoredBy, s.score.home, s.score.away);
         }
         return s;
       });
+
+      // O pedido de chute vale por um quadro só.
+      if (inp.kickRequested) {
+        input.modify((v) => {
+          'worklet';
+          v.kickRequested = false;
+          return v;
+        });
+      }
     } catch (e) {
       // Um erro no loop não pode derrubar o app: paramos o loop e mostramos o erro.
       running.value = false;
@@ -91,5 +80,5 @@ export function useGameLoop() {
     }
   });
 
-  return { state, score, loopError };
+  return { state, input, score, loopError };
 }

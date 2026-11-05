@@ -6,32 +6,25 @@
  *
  * Convenção do mundo: origem (0,0) no canto superior esquerdo do campo,
  * x para a direita, y para baixo, em "metros do jogo".
+ * Gol de CIMA (y = 0) é onde o seu time marca. Gol de BAIXO é o seu.
  */
 import { BALL, FIELD } from '../config/balance';
 import type { BallState, StepEvent } from './types';
 
-/** Faixa vertical (y) ocupada pela boca do gol. */
-export function goalMouth(): { top: number; bottom: number } {
+/** Faixa horizontal (x) ocupada pela boca dos gols. */
+export function goalMouth(): { left: number; right: number } {
   'worklet';
-  const top = (FIELD.height - FIELD.goalWidth) / 2;
-  return { top, bottom: top + FIELD.goalWidth };
+  const left = (FIELD.width - FIELD.goalWidth) / 2;
+  return { left, right: left + FIELD.goalWidth };
 }
 
-/**
- * Avança a bola `dt` segundos.
- * Modifica `ball` no lugar (mais barato que criar objetos a cada quadro)
- * e devolve se houve gol.
- */
-export function stepBall(ball: BallState, dt: number): StepEvent {
+/** Move a bola solta `dt` segundos, aplicando atrito. Modifica `ball` no lugar. */
+export function moveBall(ball: BallState, dt: number): void {
   'worklet';
-  const r = BALL.radius;
-  const { top, bottom } = goalMouth();
-
-  // 1) Movimento.
   ball.x += ball.vx * dt;
   ball.y += ball.vy * dt;
 
-  // 2) Atrito exponencial: independe da taxa de quadros (30 ou 120 fps dão o mesmo resultado).
+  // Atrito exponencial: independe da taxa de quadros (30 ou 120 fps dão o mesmo resultado).
   const decay = Math.pow(BALL.frictionPerSecond, dt);
   ball.vx *= decay;
   ball.vy *= decay;
@@ -39,30 +32,40 @@ export function stepBall(ball: BallState, dt: number): StepEvent {
     ball.vx = 0;
     ball.vy = 0;
   }
+}
 
-  // 3) Laterais (cima e baixo): sempre parede.
-  if (ball.y < r) {
-    ball.y = r;
-    ball.vy = Math.abs(ball.vy) * BALL.wallBounce;
-  } else if (ball.y > FIELD.height - r) {
-    ball.y = FIELD.height - r;
-    ball.vy = -Math.abs(ball.vy) * BALL.wallBounce;
+/**
+ * Trata paredes e gols. Chamada todo quadro, com a bola solta ou nos pés.
+ * Devolve se houve gol.
+ */
+export function resolveBallBounds(ball: BallState): StepEvent {
+  'worklet';
+  const r = BALL.radius;
+  const { left, right } = goalMouth();
+
+  // Laterais (esquerda e direita): sempre parede.
+  if (ball.x < r) {
+    ball.x = r;
+    ball.vx = Math.abs(ball.vx) * BALL.wallBounce;
+  } else if (ball.x > FIELD.width - r) {
+    ball.x = FIELD.width - r;
+    ball.vx = -Math.abs(ball.vx) * BALL.wallBounce;
   }
 
-  // 4) Linhas de fundo: parede, exceto na boca do gol.
-  const insideMouth = ball.y > top + r && ball.y < bottom - r;
+  // Linhas de fundo: parede, exceto na boca do gol.
+  const insideMouth = ball.x > left + r && ball.x < right - r;
 
   if (insideMouth) {
     // A bola inteira cruzou a linha → gol.
-    if (ball.x < -r) return { kind: 'goal', scoredBy: 'right' };
-    if (ball.x > FIELD.width + r) return { kind: 'goal', scoredBy: 'left' };
+    if (ball.y < -r) return { kind: 'goal', scoredBy: 'home' };
+    if (ball.y > FIELD.height + r) return { kind: 'goal', scoredBy: 'away' };
   } else {
-    if (ball.x < r) {
-      ball.x = r;
-      ball.vx = Math.abs(ball.vx) * BALL.wallBounce;
-    } else if (ball.x > FIELD.width - r) {
-      ball.x = FIELD.width - r;
-      ball.vx = -Math.abs(ball.vx) * BALL.wallBounce;
+    if (ball.y < r) {
+      ball.y = r;
+      ball.vy = Math.abs(ball.vy) * BALL.wallBounce;
+    } else if (ball.y > FIELD.height - r) {
+      ball.y = FIELD.height - r;
+      ball.vy = -Math.abs(ball.vy) * BALL.wallBounce;
     }
   }
 
